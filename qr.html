@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRコード読み取り</title>
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#005bac">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="中央リハアプリ">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <link rel="stylesheet" href="style.css">
+  <!-- jsQRライブラリの読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .qr-card {
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 500px;
+      margin: 30px auto;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .qr-card h2 {
+      font-size: 22px;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    .qr-card p {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto 20px auto;
+      background-color: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .scan-guide {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60%;
+      height: 60%;
+      border: 2px dashed #38bdf8;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    .btn-container {
+      margin-top: 20px;
+    }
+
+    .btn-home {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .btn-home:hover {
+      background-color: #e2e8f0;
+    }
+  </style>
+</head>
+<body class="dashboard-body">
+
+  <header class="top-header">
+    <h1>九州中央リハビリテーション学院アプリ</h1>
+  </header>
+
+  <main class="portal-grid">
+    <div class="qr-card">
+      <h2>📷 QRコード読み取り</h2>
+      <p>学科ブースのQRコードにかざしてください</p>
+
+      <div class="video-container">
+        <video id="video" playsinline></video>
+        <div class="scan-guide"></div>
+      </div>
+      <canvas id="canvas" hidden></canvas>
+
+      <div class="btn-container">
+        <a href="index.html" class="btn-home">ホームに戻る</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let isScanning = true;
+
+    // カメラの起動
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true);
+        video.play();
+        requestAnimationFrame(tick);
+      })
+      .catch(err => {
+        alert("カメラの起動に失敗しました。カメラのアクセス許可を確認してください。");
+      });
+
+    function tick() {
+      if (!isScanning) return;
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+
+        if (code && code.data) {
+          isScanning = false;
+          handleQRCode(code.data.trim());
+          return;
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // QRコード読み取り後の処理（Supabase同期）
+    async function handleQRCode(qrData) {
+      let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (!currentUser || !currentUser.email) {
+        alert('ログインが必要です。');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // 「ポイント交換」用QRコードを読み取った場合
+      if (qrData === 'ポイント交換') {
+        alert('ポイント交換用QRコードを読み取りました！交換画面へ移動します。');
+        window.location.href = 'koukan.html';
+        return;
+      }
+
+      try {
+        // Supabaseから最新のユーザーデータを取得
+        const { data: dbUser, error: fetchError } = await supabaseClient
+          .from('users')
+          .select('*')
+          .eq('email', currentUser.email)
+          .single();
+
+        if (fetchError || !dbUser) {
+          alert('ユーザー情報の取得に失敗しました。');
+          window.location.href = 'index.html';
+          return;
+        }
+
+        const addPoints = 50;
+        const newPoints = (dbUser.points || 0) + addPoints;
+
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        // 履歴カラム名（pointHistory または point_history）に合わせて追記
+        const historyKey = Array.isArray(dbUser.point_history) ? 'point_history' : 'pointHistory';
+        const currentHistory = Array.isArray(dbUser[historyKey]) ? dbUser[historyKey] : [];
+
+        const newRecord = {
+          date: dateStr,
+          event: "ブース訪問（QR）",
+          points: `+${addPoints} pt`,
+          department: qrData // 読み込んだ学科名が記録される
+        };
+
+        const updatedHistory = [newRecord, ...currentHistory];
+
+        // Supabaseへポイントと履歴を保存
+        const { data: updatedUser, error: updateError } = await supabaseClient
+          .from('users')
+          .update({
+            points: newPoints,
+            [historyKey]: updatedHistory
+          })
+          .eq('id', dbUser.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          alert('データの保存に失敗しました: ' + updateError.message);
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // localStorageも最新に同期
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+        alert(`【${qrData}】のQRコードを読み取りました！\n+${addPoints} pt 獲得しました！`);
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        console.error(err);
+        alert('エラーが発生しました: ' + err.message);
+        window.location.href = 'index.html';
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.error('SW登録失敗:', err));
+      });
+    }
+  </script>
+</body>
+</html>

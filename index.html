@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ホーム画面</title>
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#005bac">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="中央リハアプリ">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ユーザー情報＆ポイントバー全体の余白調整 */
+    .user-bar {
+      padding: 20px 24px;
+      gap: 20px;
+      background-color: #ffffff;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+    }
+
+    /* プロフィール情報：完全固定 */
+    .user-profile {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .profile-info-row {
+      display: flex;
+      align-items: center;
+      font-size: 18px;
+      white-space: nowrap;
+      height: 28px;
+    }
+
+    /* 「学校名：」「氏名：」「学年：」の幅固定 */
+    .profile-info-label {
+      width: 100px;
+      font-weight: 700;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    .profile-info-value {
+      font-weight: 800;
+      font-size: 20px;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+
+    /* PC表示：右側グループ（QRボタン ＋ ポイントバッジ） */
+    .point-action-group {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    /* ポイントバッジ */
+    .point-badge {
+      padding: 14px 24px;
+      border-radius: 16px;
+      border: 2px solid #fdba74;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.12);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: linear-gradient(135deg, #fff7ed, #ffedd5);
+      transition: transform 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+
+    .point-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(234, 88, 12, 0.2);
+    }
+
+    .point-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: #c2410c;
+    }
+
+    .point-value {
+      font-size: 28px;
+      font-weight: 900;
+      color: #ea580c;
+    }
+
+    /* QRコード読み取りボタン */
+    .qr-btn {
+      background-color: #0284c7;
+      color: #ffffff;
+      padding: 10px;
+      border-radius: 14px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+      transition: transform 0.2s, background-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .qr-btn:hover {
+      background-color: #0369a1;
+      transform: translateY(-2px);
+    }
+
+    /* QRコードアイコン画像スタイル */
+    .qr-icon {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
+    /* スマホ・縦長画面（幅600px以下）の表示調整 */
+    @media (max-width: 600px) {
+      .user-bar {
+        padding: 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+      }
+
+      .user-profile {
+        width: 100%;
+      }
+
+      .qr-btn {
+        position: absolute;
+        right: 16px;
+        top: 36px;
+        padding: 18px;
+        border-radius: 20px;
+      }
+
+      .qr-btn .qr-icon {
+        width: 48px;
+        height: 48px;
+      }
+
+      .point-badge-link {
+        width: 100%;
+      }
+
+      .point-badge {
+        width: 100%;
+        justify-content: space-between;
+        box-sizing: border-box;
+      }
+    }
+
+    /* NEWタグスタイル */
+    .event-tag-new {
+      background-color: #ef4444 !important;
+      color: #ffffff !important;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body class="dashboard-body">
+
+  <!-- 上部タイトル固定 -->
+  <header class="top-header">
+    <h1>九州中央リハビリテーション学院アプリ</h1>
+  </header>
+
+  <!-- ユーザー情報 & ポイント表示バー -->
+  <div class="user-bar">
+    <div class="user-profile">
+      <div class="profile-info-row">
+        <span class="profile-info-label">学校名：</span>
+        <span class="profile-info-value" id="display-school">-</span>
+      </div>
+      <div class="profile-info-row">
+        <span class="profile-info-label">氏 名：</span>
+        <span class="profile-info-value" id="display-fullname">-</span>
+      </div>
+      <div class="profile-info-row">
+        <span class="profile-info-label">学 年：</span>
+        <span class="profile-info-value" id="display-grade">-</span>
+      </div>
+    </div>
+
+    <div class="point-action-group">
+      <a href="qr.html" class="qr-btn" title="QRコード読み取り">
+        <img src="qr読み取りイラスト.png" alt="QR Icon" class="qr-icon">
+      </a>
+      <a href="point.html" class="point-badge-link" style="text-decoration: none; color: inherit; display: block;">
+        <div class="point-badge" style="cursor: pointer;">
+          <span class="point-label">所持ポイント</span>
+          <span class="point-value" id="display-points">0 pt</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <main class="portal-grid">
+    <!-- イベント一覧（管理者側データと動的連動） -->
+    <section class="card widget-events">
+      <h2>📅 イベント一覧</h2>
+      <ul class="event-list" id="display-event-list">
+        <!-- JavaScriptで自動描画されます -->
+      </ul>
+    </section>
+
+    <!-- メニューカード -->
+    <div class="menu-cards">
+      <a href="quiz.html" class="menu-card card-quiz">
+        <div class="card-icon">💡</div>
+        <h3>学科クイズ</h3>
+        <p>クイズに答えてポイントGET！</p>
+      </a>
+
+      <a href="#" class="menu-card card-game">
+        <div class="card-icon">🎮</div>
+        <h3>ミニゲーム</h3>
+        <p>隙間時間に遊んで息抜き</p>
+      </a>
+
+      <a href="#" class="menu-card card-info">
+        <div class="card-icon">🏫</div>
+        <h3>学科説明</h3>
+        <p>各学科の特徴や学びを紹介</p>
+      </a>
+
+      <a href="koukan.html" class="menu-card card-exchange">
+        <div class="card-icon">🎁</div>
+        <h3>ポイント交換</h3>
+        <p>貯まったポイントを特典に交換</p>
+      </a>
+    </div>
+  </main>
+
+  <!-- 右下フッター（お問い合わせ・ログアウト） -->
+  <footer class="bottom-footer">
+    <div class="footer-actions">
+      <a href="#" class="btn-footer contact-btn">💬 お問い合わせ</a>
+      <button id="logout-btn" class="btn-footer logout-btn">🚪 ログアウト</button>
+    </div>
+  </footer>
+
+  <script>
+    // Supabase 設定
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+    // ユーザー情報表示 & Supabaseデータ同期処理
+    async function initUserProfile() {
+      if (!currentUser || !currentUser.email) {
+        alert('ログインが必要です。');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // まず現在のローカル情報を仮表示
+      renderUserData(currentUser);
+
+      // Supabaseの users テーブルから最新情報を取得
+      const { data: dbUser, error } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('email', currentUser.email)
+        .maybeSingle();
+
+      if (dbUser) {
+        currentUser = dbUser;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        renderUserData(currentUser);
+      }
+
+      // Supabaseの変更（ポイント付与・消費など）をリアルタイム監視
+      supabaseClient
+        .channel('public:users')
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'users', 
+          filter: `email=eq.${currentUser.email}` 
+        }, payload => {
+          currentUser = payload.new;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          renderUserData(currentUser);
+        })
+        .subscribe();
+    }
+
+    // 画面にユーザー情報を描画する関数
+    function renderUserData(user) {
+      document.getElementById('display-school').textContent = user.school || '-';
+      document.getElementById('display-fullname').textContent = user.name || user.fullname || '-';
+      document.getElementById('display-grade').textContent = user.grade || '-';
+      document.getElementById('display-points').textContent = (user.points || 0).toLocaleString() + ' pt';
+    }
+
+    // イベント一覧表示処理（西暦・月・日・曜日表示）
+    function loadEvents() {
+      const defaultEvents = [
+        { id: 1, date: '2026-10-15', title: 'オープンキャンパス 秋の体験授業', isNew: true },
+        { id: 2, date: '2026-10-22', title: '特別講義：最新のリハビリ医療技術', isNew: false },
+        { id: 3, date: '2026-11-03', title: '学院祭（中央リハフェス 2026）', isNew: false }
+      ];
+
+      const saved = localStorage.getItem('admin_events');
+      const events = saved ? JSON.parse(saved) : defaultEvents;
+      const listContainer = document.getElementById('display-event-list');
+      listContainer.innerHTML = '';
+
+      if (events.length === 0) {
+        listContainer.innerHTML = '<li style="color:#94a3b8; justify-content:center;">現在予定されているイベントはありません</li>';
+        return;
+      }
+
+      // 開催日順に並び替え
+      events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      const dayOfWeekStr = ['日', '月', '火', '水', '木', '金', '土'];
+
+      events.forEach(ev => {
+        const li = document.createElement('li');
+
+        // 日付から 年/月/日 (曜日) を算出（例: 2026/10/15 (水)）
+        let dateBadgeText = ev.date;
+        if (ev.date) {
+          const d = new Date(ev.date + 'T00:00:00');
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const date = String(d.getDate()).padStart(2, '0');
+          const day = dayOfWeekStr[d.getDay()];
+          dateBadgeText = `${year}/${month}/${date} (${day})`;
+        }
+
+        li.innerHTML = `
+          <span class="event-date">${dateBadgeText}</span>
+          <div class="event-info">
+            <p class="event-title">${ev.title}</p>
+            ${ev.isNew ? '<span class="event-tag event-tag-new">NEW</span>' : ''}
+          </div>
+        `;
+        listContainer.appendChild(li);
+      });
+    }
+
+    // ログアウト処理
+    document.getElementById('logout-btn').addEventListener('click', function() {
+      localStorage.removeItem('currentUser');
+      alert('ログアウトしました。');
+      window.location.href = 'login.html';
+    });
+
+    // ページ読み込み時の実行
+    initUserProfile();
+    loadEvents();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.error('SW登録失敗:', err));
+      });
+    }
+  </script>
+</body>
+</html>

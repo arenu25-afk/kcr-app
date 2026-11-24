@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プロフィール設定</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="auth-card">
+    <h2>プロフィール設定</h2>
+    <p class="form-desc">アプリで表示する情報を入力してください。</p>
+    
+    <form id="profile-form">
+      <div class="input-group">
+        <label for="school">学校名</label>
+        <input type="text" id="school" name="school" required placeholder="(例) 九州中央リハビリテーション学院">
+      </div>
+
+      <div class="input-group">
+        <label for="fullname">氏名</label>
+        <input type="text" id="fullname" name="fullname" required placeholder="(例) 山田 太郎">
+      </div>
+
+      <div class="input-group">
+        <label for="grade">学年</label>
+        <select id="grade" name="grade" required class="select-input">
+          <option value="">選択してください</option>
+          <option value="1年">1年</option>
+          <option value="2年">2年</option>
+          <option value="3年">3年</option>
+          <option value="既卒生">既卒生</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn" id="submit-btn">登録してホームへ</button>
+    </form>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById('profile-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '登録中...';
+
+      const email = sessionStorage.getItem('temp_email');
+      const password = sessionStorage.getItem('temp_password');
+
+      if (!email || !password) {
+        alert('登録情報が見つかりません。新規登録画面からやり直してください。');
+        window.location.href = 'signup.html';
+        return;
+      }
+
+      const school = document.getElementById('school').value.trim();
+      const fullname = document.getElementById('fullname').value.trim();
+      const grade = document.getElementById('grade').value;
+
+      try {
+        // 既存ユーザーか確認
+        const { data: existingUser } = await supabaseClient
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+
+        let finalUser;
+
+        if (existingUser) {
+          // 既存ユーザーの場合はポイントを変更せず、プロフィール情報のみ更新
+          const { data: updatedUser, error: updateError } = await supabaseClient
+            .from('users')
+            .update({
+              password: password,
+              name: fullname,
+              school: school,
+              grade: grade
+            })
+            .eq('email', email)
+            .select()
+            .single();
+
+          if (updateError) {
+            alert('【更新失敗】\n' + updateError.message);
+            return;
+          }
+          finalUser = updatedUser;
+        } else {
+          // 完全な新規ユーザーの場合のみ初期 0pt で作成
+          const { data: newUser, error: insertError } = await supabaseClient
+            .from('users')
+            .insert([{
+              email: email,
+              password: password,
+              name: fullname,
+              school: school,
+              grade: grade,
+              points: 0
+            }])
+            .select()
+            .single();
+
+          if (insertError) {
+            alert('【登録失敗】\n' + insertError.message);
+            return;
+          }
+          finalUser = newUser;
+        }
+
+        sessionStorage.removeItem('temp_email');
+        sessionStorage.removeItem('temp_password');
+
+        localStorage.setItem('currentUser', JSON.stringify(finalUser));
+
+        alert('アカウントの登録が完了しました！');
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        console.error(err);
+        alert('予期せぬエラーが発生しました: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '登録してホームへ';
+      }
+    });
+  </script>
+</body>
+</html>

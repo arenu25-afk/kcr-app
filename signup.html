@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新規登録画面</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="auth-card">
+    <h2>新規アカウント登録</h2>
+    <form id="signup-form">
+      <div class="input-group">
+        <label for="email">メールアドレス</label>
+        <input type="email" id="email" name="email" required placeholder="(例)aren.u25@kcr.ac.jp">
+      </div>
+      <div class="input-group">
+        <label for="password">パスワード</label>
+        <input type="password" id="password" name="password" required placeholder="8文字以上の英数字">
+      </div>
+      <button type="submit" class="btn" id="submit-btn">次へ（プロフィール設定）</button>
+    </form>
+    <p class="auth-link">
+      すでにアカウントをお持ちですか？ <a href="login.html">ログインはこちら</a>
+    </p>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById('signup-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '確認中...';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      try {
+        // Supabaseで既に登録されているメールアドレスか判定
+        const { data: existingUser, error } = await supabaseClient
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (error) {
+          alert('【通信エラー】\n' + error.message);
+          return;
+        }
+
+        if (existingUser) {
+          alert('このメールアドレスは既に登録されています。ログイン画面へ移動してください。');
+          return;
+        }
+
+        // 一時保存して次のプロフィール設定画面（profile_setup.html）へ引き継ぎ
+        sessionStorage.setItem('temp_email', email);
+        sessionStorage.setItem('temp_password', password);
+
+        window.location.href = 'profile_setup.html';
+
+      } catch (err) {
+        console.error(err);
+        alert('予期せぬエラーが発生しました: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '次へ（プロフィール設定）';
+      }
+    });
+  </script>
+</body>
+</html>

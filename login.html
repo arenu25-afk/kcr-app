@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログイン</title>
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#005bac">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="中央リハアプリ">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="auth-card">
+    <h2>ログイン</h2>
+    <form id="login-form">
+      <div class="input-group">
+        <label for="email">メールアドレス</label>
+        <input type="email" id="email" name="email" required placeholder="example@email.com">
+      </div>
+      <div class="input-group">
+        <label for="password">パスワード</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <button type="submit" class="btn" id="submit-btn">ログイン</button>
+    </form>
+    <p class="auth-link">
+      アカウントをお持ちでないですか？ <a href="signup.html">新規登録はこちら</a>
+    </p>
+  </div>
+
+  <script>
+    // アプリ起動時にすでにログイン済みならホーム画面へ自動遷移
+    if (localStorage.getItem('currentUser')) {
+      window.location.href = 'index.html';
+    }
+
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '認証中...';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      try {
+        // Supabaseからユーザー情報を取得
+        const { data: user, error } = await supabaseClient
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (error) {
+          alert('【通信エラー】\n' + error.message);
+          return;
+        }
+
+        if (!user) {
+          alert('アカウントが見つかりません。新規登録を行ってください。');
+          return;
+        }
+
+        if (user.password !== password) {
+          alert('パスワードが違います。');
+          return;
+        }
+
+        // Supabaseの最新データ（ポイント保持）をそのままセット
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        alert(`ログインに成功しました！`);
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        console.error(err);
+        alert('予期せぬエラーが発生しました: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'ログイン';
+      }
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.error('SW登録失敗:', err));
+      });
+    }
+  </script>
+</body>
+</html>

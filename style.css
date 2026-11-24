@@ -1,0 +1,391 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+
+body {
+  background-color: #f4f6f8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.auth-card {
+  background: #ffffff;
+  padding: 30px 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-card h2 {
+  margin-bottom: 24px;
+  text-align: center;
+  color: #333333;
+}
+
+.form-desc {
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.input-group {
+  margin-bottom: 18px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #555555;
+}
+
+.input-group input,
+.select-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #fff;
+}
+
+.input-group input:focus,
+.select-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn:hover {
+  background-color: #0056b3;
+}
+
+.auth-link {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #666666;
+}
+
+.auth-link a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
+/* ホーム画面（ダッシュボード）用スタイル */
+.dashboard-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  min-height: 100vh;
+  background-color: #f0f4f8;
+  color: #333;
+}
+
+.top-header {
+  background-color: #0056b3;
+  color: #ffffff;
+  padding: 16px 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.top-header h1 {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.user-bar {
+  background-color: #ffffff;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #e2e8f0;
+  gap: 20px;
+}
+
+.user-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.school-name {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.user-details {
+  font-size: 15px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.point-badge {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border: 2px solid #fdba74;
+  padding: 14px 24px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.12);
+}
+
+.point-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #c2410c;
+}
+
+.point-value {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ea580c;
+}
+
+.portal-grid {
+  flex: 1;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 16px 80px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.widget-events h2 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #1e293b;
+}
+
+.event-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.event-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+}
+
+.event-date {
+  background-color: #007bff;
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.event-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.event-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.event-tag {
+  font-size: 11px;
+  color: #64748b;
+  background-color: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.menu-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.menu-card {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.menu-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+.card-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.menu-card h3 {
+  font-size: 16px;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.menu-card p {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.bottom-footer {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  pointer-events: none;
+  padding: 16px;
+}
+
+.footer-actions {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.btn-footer {
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.contact-btn {
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.contact-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.logout-btn {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+}
+
+.logout-btn:hover {
+  background-color: #dc2626;
+}
+
+
+/* --- プロフィール設定用の追加スタイル --- */
+
+/* 「その他」選択前の非表示用 */
+.hidden {
+  display: none !important;
+}
+
+/* 要素同士の上部余白調整 */
+.mt-2 {
+  margin-top: 8px;
+}
+
+/* スマホ表示などで崩れないためのレスポンシブ補正 */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px 20px;
+  }
+}
+
+
+/* --- ユーザー情報（学校名・氏名・学年）レイアウト追加部分 --- */
+
+.profile-info-row {
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+}
+
+.profile-info-label {
+  width: 100px;
+  font-weight: 700;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.profile-info-value {
+  font-weight: 800;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+/* スマホ幅での離れ防止＆ポイント調整 */
+@media (max-width: 600px) {
+  .user-bar {
+    padding: 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .profile-info-label {
+    width: 90px;
+  }
+  .profile-info-row {
+    font-size: 16px;
+  }
+  .profile-info-value {
+    font-size: 18px;
+  }
+  .point-badge {
+    justify-content: space-between;
+  }
+}

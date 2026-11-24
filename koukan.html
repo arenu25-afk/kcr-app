@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポイント交換</title>
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#005bac">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="中央リハアプリ">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- jsQRライブラリの読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    .exchange-card {
+      background: #ffffff;
+      padding: 28px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 700px;
+      margin: 20px auto;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .exchange-card h2 {
+      font-size: 24px;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    .info-bar {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .info-item {
+      font-size: 15px;
+      color: #475569;
+    }
+
+    .info-item span {
+      font-weight: bold;
+      color: #0f172a;
+    }
+
+    .point-highlight {
+      color: #ea580c !important;
+      font-size: 18px;
+    }
+
+    .item-section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #334155;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .item-card {
+      background: #ffffff;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .item-card:hover {
+      border-color: #38bdf8;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .item-image {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .item-name {
+      font-size: 15px;
+      font-weight: bold;
+      color: #1e293b;
+    }
+
+    .item-cost {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ea580c;
+    }
+
+    .btn-exchange {
+      width: 100%;
+      padding: 10px;
+      background-color: #ea580c;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-exchange:hover {
+      background-color: #c2410c;
+    }
+
+    .btn-exchange:disabled {
+      background-color: #cbd5e1;
+      cursor: not-allowed;
+    }
+
+    .btn-home {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+      text-align: center;
+      box-sizing: border-box;
+      transition: background-color 0.2s;
+    }
+
+    .btn-home:hover {
+      background-color: #e2e8f0;
+    }
+
+    /* QR読み取りモーダル用スタイル */
+    .qr-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(15, 23, 42, 0.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .qr-modal-card {
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .qr-modal-card h3 {
+      font-size: 20px;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+    }
+
+    .qr-modal-target {
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      color: #c2410c;
+      font-weight: bold;
+      font-size: 15px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .qr-modal-desc {
+      font-size: 14px;
+      color: #475569;
+      margin: 0 0 16px 0;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto 16px auto;
+      background-color: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #exchange-video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .scan-guide {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60%;
+      height: 60%;
+      border: 2px dashed #ea580c;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    .btn-cancel-scan {
+      width: 100%;
+      padding: 12px;
+      background-color: #94a3b8;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-cancel-scan:hover {
+      background-color: #64748b;
+    }
+  </style>
+</head>
+<body class="dashboard-body">
+
+  <header class="top-header">
+    <h1>九州中央リハビリテーション学院アプリ</h1>
+  </header>
+
+  <main class="portal-grid">
+    <div class="exchange-card">
+      <h2>ポイント交換</h2>
+
+      <div class="info-bar">
+        <div class="info-item">所持ポイント：<span id="user-points" class="point-highlight">0 pt</span></div>
+        <div class="info-item">日付：<span id="current-date">-</span></div>
+      </div>
+
+      <div class="item-section-title">🎁 特典・商品一覧</div>
+      <div class="items-grid" id="items-container">
+        <!-- DBから動的描画 -->
+      </div>
+
+      <div class="btn-container">
+        <a href="index.html" class="btn-home">ホームに戻る</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- ポイント交換用QRコード読み取りモーダル -->
+  <div class="qr-modal-overlay" id="qr-modal">
+    <div class="qr-modal-card">
+      <h3>📷 ポイント交換QR読み取り</h3>
+      <div class="qr-modal-target" id="modal-target-info">-</div>
+      <p class="qr-modal-desc">景品交換カウンターの「ポイント交換用」QRコードにかざしてください</p>
+
+      <div class="video-container">
+        <video id="exchange-video" playsinline></video>
+        <div class="scan-guide"></div>
+      </div>
+      <canvas id="exchange-canvas" hidden></canvas>
+
+      <button type="button" class="btn-cancel-scan" onclick="closeExchangeScanner()">キャンセル</button>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+    // QRカメラ制御用変数
+    let isScanning = false;
+    let videoStream = null;
+    let pendingExchangeItem = null;
+    let isAlertShowing = false;
+
+    async function init() {
+      if (!currentUser || !currentUser.email) {
+        alert('ログインが必要です。');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const now = new Date();
+      document.getElementById('current-date').textContent = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+
+      await syncUserPoints();
+      await loadDbItems();
+
+      supabaseClient
+        .channel('public:users')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `email=eq.${currentUser.email}` }, payload => {
+          currentUser = payload.new;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          document.getElementById('user-points').textContent = (currentUser.points || 0).toLocaleString() + ' pt';
+        })
+        .subscribe();
+    }
+
+    async function syncUserPoints() {
+      const { data: dbUser } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('email', currentUser.email)
+        .maybeSingle();
+
+      if (dbUser) {
+        currentUser = dbUser;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        document.getElementById('user-points').textContent = (currentUser.points || 0).toLocaleString() + ' pt';
+      }
+    }
+
+    async function loadDbItems() {
+      const container = document.getElementById('items-container');
+      container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#94a3b8; padding:20px;">商品を読み込み中...</p>';
+
+      const { data: items, error } = await supabaseClient
+        .from('items')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#ef4444; padding:20px;">商品の取得に失敗しました。</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+
+      if (!items || items.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#94a3b8; padding:20px;">現在登録されている商品はありません。</p>';
+        return;
+      }
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+          <img src="${item.image_url}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/100?text=No+Image'">
+          <div class="item-name">${item.name}</div>
+          <div class="item-cost">${item.points} pt</div>
+          <button class="btn-exchange" onclick="handleExchange('${item.name}', ${item.points})">交換する</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // 交換ボタン押下時：ポイント確認後にカメラを起動
+    async function handleExchange(itemName, cost) {
+      await syncUserPoints();
+      const currentPts = currentUser.points || 0;
+
+      if (currentPts < cost) {
+        alert(`ポイントが不足しています。\n必要: ${cost} pt / 所持: ${currentPts} pt`);
+        return;
+      }
+
+      pendingExchangeItem = { name: itemName, cost: cost };
+      document.getElementById('modal-target-info').textContent = `交換商品：${itemName}（-${cost} pt）`;
+      openExchangeScanner();
+    }
+
+    // カメラ起動・QRスキャン開始
+    function openExchangeScanner() {
+      const modal = document.getElementById('qr-modal');
+      const video = document.getElementById('exchange-video');
+      modal.style.display = 'flex';
+      isScanning = true;
+      isAlertShowing = false;
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => {
+          videoStream = stream;
+          video.srcObject = stream;
+          video.setAttribute("playsinline", true);
+          video.play();
+          requestAnimationFrame(tickExchangeScan);
+        })
+        .catch(err => {
+          alert("カメラの起動に失敗しました。カメラのアクセス許可を確認してください。");
+          closeExchangeScanner();
+        });
+    }
+
+    // カメラ停止・モーダル閉じる
+    function closeExchangeScanner() {
+      isScanning = false;
+      document.getElementById('qr-modal').style.display = 'none';
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+      }
+    }
+
+    // QRコードフレーム解析
+    function tickExchangeScan() {
+      if (!isScanning) return;
+
+      const video = document.getElementById('exchange-video');
+      const canvas = document.getElementById('exchange-canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA && !isAlertShowing) {
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+
+        if (code && code.data) {
+          const scannedText = code.data.trim();
+          if (scannedText === 'ポイント交換') {
+            isScanning = false;
+            closeExchangeScanner();
+            completeExchange();
+            return;
+          } else {
+            isAlertShowing = true;
+            alert(`このQRコード（${scannedText}）はポイント交換用ではありません。\n「ポイント交換用」のQRコードを読み取ってください。`);
+            isAlertShowing = false;
+          }
+        }
+      }
+      requestAnimationFrame(tickExchangeScan);
+    }
+
+    // ポイント交換用QR読み取り成功後のSupabase更新処理
+    async function completeExchange() {
+      if (!pendingExchangeItem) return;
+      const { name: itemName, cost } = pendingExchangeItem;
+      pendingExchangeItem = null;
+
+      await syncUserPoints();
+      const currentPts = currentUser.points || 0;
+
+      if (currentPts < cost) {
+        alert(`ポイントが不足しています。\n必要: ${cost} pt / 所持: ${currentPts} pt`);
+        return;
+      }
+
+      const newPoints = currentPts - cost;
+
+      // 既存の履歴を取得
+      const historyKey = Array.isArray(currentUser.point_history) ? 'point_history' : 'pointHistory';
+      let history = currentUser[historyKey] || [];
+      if (!Array.isArray(history)) history = [];
+
+      // 日時フォーマット生成
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const date = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const dateStr = `${year}/${month}/${date} ${hours}:${minutes}`;
+
+      // 交換履歴を配列の先頭に追加
+      history.unshift({
+        date: dateStr,
+        event: "ポイント交換",
+        points: `-${cost} pt`,
+        department: itemName
+      });
+
+      // Supabaseへ最新ポイントと履歴を保存
+      const { error: updateError } = await supabaseClient
+        .from('users')
+        .update({ 
+          points: newPoints,
+          [historyKey]: history
+        })
+        .eq('email', currentUser.email);
+
+      if (updateError) {
+        alert('ポイント更新失敗: ' + updateError.message);
+        return;
+      }
+
+      currentUser.points = newPoints;
+      currentUser[historyKey] = history;
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      document.getElementById('user-points').textContent = newPoints.toLocaleString() + ' pt';
+
+      alert(`QRコードを確認しました！\n「${itemName}」（-${cost} pt）と交換しました！`);
+    }
+
+    init();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.error('SW登録失敗:', err));
+      });
+    }
+  </script>
+</body>
+</html>

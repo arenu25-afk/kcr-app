@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学科クイズ</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .quiz-container {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 16px;
+    }
+
+    .quiz-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 2px solid #e2e8f0;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #0284c7;
+      border-radius: 12px;
+      font-size: 16px;
+      background-color: #ffffff;
+      box-sizing: border-box;
+    }
+
+    .dept-tag {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 13px;
+      font-weight: bold;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    .quiz-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #0f172a;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .option-btn {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #f8fafc;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #0f172a;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .option-btn:hover {
+      background: #f1f5f9;
+      border-color: #0284c7;
+    }
+
+    .result-box {
+      display: none;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 16px;
+    }
+
+    .result-correct {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+
+    .result-wrong {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }
+
+    .btn-action {
+      width: 100%;
+      padding: 14px;
+      margin-top: 16px;
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="dashboard-body">
+
+  <header class="top-header">
+    <h1>九州中央リハビリテーション学院アプリ</h1>
+  </header>
+
+  <main class="quiz-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h2 style="margin:0; color:#0f172a;">💡 学科クイズ</h2>
+      <a href="index.html" style="text-decoration:none; font-weight:bold; color:#0284c7;">ホームに戻る</a>
+    </div>
+
+    <!-- 1. 学科選択エリア -->
+    <div id="dept-select-box" class="quiz-card">
+      <div class="form-group">
+        <label for="user-dept-select">学科を選択：</label>
+        <select id="user-dept-select">
+          <option value="">学科を選択してください</option>
+          <option value="作業療法学科">作業療法学科</option>
+          <option value="理学療法学科">理学療法学科</option>
+          <option value="看護学科">看護学科</option>
+          <option value="介護福祉学科">介護福祉学科</option>
+          <option value="国際介護学科">国際介護学科</option>
+          <option value="情報システム学科">情報システム学科</option>
+        </select>
+      </div>
+      <button class="btn-action" onclick="startQuiz()">クイズを開始する</button>
+    </div>
+
+    <!-- 2. クイズ解答エリア（初期状態は非表示） -->
+    <div id="quiz-box" class="quiz-card" style="display: none;">
+      <span class="dept-tag" id="display-dept">-</span>
+      <div class="quiz-title" id="display-question"></div>
+
+      <div id="options-container">
+        <!-- 選択肢がここに入ります -->
+      </div>
+
+      <div id="result-box" class="result-box"></div>
+      <button id="next-btn" class="btn-action" style="display:none;" onclick="nextQuestion()">次の問題へ</button>
+      <button id="retry-btn" class="btn-action" style="display:none;" onclick="resetQuiz()">学科選択に戻る</button>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allQuizzes = [];
+    let filteredQuizzes = [];
+    let currentIndex = 0;
+
+    function loadQuizzes() {
+      const saved = localStorage.getItem('admin_quizzes');
+      allQuizzes = saved ? JSON.parse(saved) : [];
+    }
+
+    function startQuiz() {
+      const selectedDept = document.getElementById('user-dept-select').value;
+      if (!selectedDept) {
+        alert('学科を選択してください。');
+        return;
+      }
+
+      filteredQuizzes = allQuizzes.filter(q => q.dept === selectedDept);
+
+      if (filteredQuizzes.length === 0) {
+        alert('選択された学科のクイズはまだ登録されていません。');
+        return;
+      }
+
+      currentIndex = 0;
+      document.getElementById('dept-select-box').style.display = 'none';
+      document.getElementById('quiz-box').style.display = 'block';
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const optionsContainer = document.getElementById('options-container');
+      const resultBox = document.getElementById('result-box');
+      const nextBtn = document.getElementById('next-btn');
+      const retryBtn = document.getElementById('retry-btn');
+
+      resultBox.style.display = 'none';
+      nextBtn.style.display = 'none';
+      retryBtn.style.display = 'none';
+
+      const q = filteredQuizzes[currentIndex];
+      document.getElementById('display-dept').textContent = q.dept;
+      document.getElementById('display-question').textContent = `Q${currentIndex + 1}. ${q.question}`;
+
+      optionsContainer.innerHTML = '';
+
+      q.options.forEach((optText, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = `${i + 1}. ${optText}`;
+        btn.onclick = () => checkAnswer(i + 1);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    async function checkAnswer(selectedOpt) {
+      const q = filteredQuizzes[currentIndex];
+      const resultBox = document.getElementById('result-box');
+      const optionBtns = document.querySelectorAll('.option-btn');
+
+      optionBtns.forEach(btn => btn.disabled = true);
+
+      if (selectedOpt === q.answer) {
+        resultBox.textContent = '⭕ 正解！ 10 pt GET！';
+        resultBox.className = 'result-box result-correct';
+
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+
+        if (currentUser.email) {
+          // 1. Supabaseから最新ユーザー情報を取得
+          const { data: dbUser } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('email', currentUser.email)
+            .maybeSingle();
+
+          if (dbUser) {
+            currentUser = dbUser;
+          }
+
+          const earnedPoints = 10;
+          const newPoints = (currentUser.points || 0) + earnedPoints;
+
+          let history = currentUser.pointHistory || currentUser.point_history || [];
+          if (!Array.isArray(history)) history = [];
+
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const date = String(now.getDate()).padStart(2, '0');
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          const dateStr = `${year}/${month}/${date} ${hours}:${minutes}`;
+
+          history.unshift({
+            date: dateStr,
+            event: '学科クイズ',
+            points: `+${earnedPoints} pt`,
+            department: q.dept
+          });
+
+          // 2. Supabase上のポイントと履歴を確実にアップデート
+          const { error: updateErr } = await supabaseClient
+            .from('users')
+            .update({ 
+              points: newPoints,
+              pointHistory: history
+            })
+            .eq('email', currentUser.email);
+
+          if (updateErr) {
+            console.error('ポイント更新エラー:', updateErr);
+            alert('Supabaseへのポイント反映に失敗しました: ' + updateErr.message);
+            return;
+          }
+
+          // 3. ローカル側も更新データに置き換え
+          currentUser.points = newPoints;
+          currentUser.pointHistory = history;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+
+      } else {
+        resultBox.textContent = `❌ 不正解... （正解は ${q.answer} 番です）`;
+        resultBox.className = 'result-box result-wrong';
+      }
+
+      resultBox.style.display = 'block';
+
+      if (currentIndex < filteredQuizzes.length - 1) {
+        document.getElementById('next-btn').style.display = 'block';
+      } else {
+        document.getElementById('retry-btn').style.display = 'block';
+      }
+    }
+
+    function nextQuestion() {
+      currentIndex++;
+      showQuestion();
+    }
+
+    function resetQuiz() {
+      document.getElementById('dept-select-box').style.display = 'block';
+      document.getElementById('quiz-box').style.display = 'none';
+    }
+
+    loadQuizzes();
+  </script>
+</body>
+</html>

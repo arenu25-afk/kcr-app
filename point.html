@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポイント履歴</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .history-card {
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 700px;
+      margin: 30px auto;
+    }
+
+    .history-card h2 {
+      font-size: 22px;
+      color: #0f172a;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .history-table-container {
+      overflow-x: auto;
+      border: 1px solid #e2e8f0; /* テーブル外枠 */
+      border-radius: 8px;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      text-align: center; /* すべて中央揃え */
+    }
+
+    .history-table th {
+      background-color: #f1f5f9;
+      color: #475569;
+      font-weight: bold;
+      padding: 12px 10px;
+      border-bottom: 2px solid #cbd5e1;
+      border-right: 1px solid #e2e8f0; /* 薄い縦の仕切り線 */
+      white-space: nowrap;
+    }
+
+    .history-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      border-right: 1px solid #f1f5f9; /* 薄い縦の仕切り線 */
+      color: #1e293b;
+      white-space: nowrap;
+    }
+
+    /* 一番右の列（学科）の右端の仕切り線は消す */
+    .history-table th:last-child,
+    .history-table td:last-child {
+      border-right: none;
+    }
+
+    .point-plus {
+      color: #ea580c;
+      font-weight: bold;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 30px;
+      color: #94a3b8;
+    }
+
+    .btn-container {
+      margin-top: 24px;
+    }
+
+    .btn-home {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+      text-align: center;
+      box-sizing: border-box;
+      transition: background-color 0.2s;
+    }
+
+    .btn-home:hover {
+      background-color: #e2e8f0;
+    }
+  </style>
+</head>
+<body class="dashboard-body">
+
+  <header class="top-header">
+    <h1>九州中央リハビリテーション学院アプリ</h1>
+  </header>
+
+  <main class="portal-grid">
+    <div class="history-card">
+      <h2>ポイント履歴</h2>
+
+      <div class="history-table-container">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>日時</th>
+              <th>イベント名</th>
+              <th>ポイント</th>
+              <th>詳細</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <!-- 履歴がJavaScriptで追加されます -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="btn-container">
+        <a href="index.html" class="btn-home">ホームに戻る</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://pgvqcbokzuuguxicycwq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBndnFjYm9renV1Z3V4aWN5Y3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNjk3ODIsImV4cCI6MjEwODY0NTc4Mn0.Cf4X9l8LQ29weTf16Mwg5shqheJd4vUrB4m9Gy1PWmc';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    const tbody = document.getElementById('history-tbody');
+
+    async function loadHistory() {
+      if (!currentUser || !currentUser.email) {
+        alert('ログインが必要です。');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // Supabaseから最新情報を取得
+      const { data: dbUser } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('email', currentUser.email)
+        .maybeSingle();
+
+      if (dbUser) {
+        currentUser = dbUser;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      }
+
+      const history = currentUser.pointHistory || currentUser.point_history || [];
+
+      tbody.innerHTML = '';
+      if (history.length > 0) {
+        history.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.date}</td>
+            <td>${item.event}</td>
+            <td class="point-plus">${item.points}</td>
+            <td>${item.department || '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        tbody.innerHTML = `<tr><td colspan="4" class="no-data">まだポイント履歴がありません。</td></tr>`;
+      }
+    }
+
+    loadHistory();
+  </script>
+</body>
+</html>
