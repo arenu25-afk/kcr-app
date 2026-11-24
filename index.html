@@ -309,26 +309,28 @@
       document.getElementById('display-points').textContent = (user.points || 0).toLocaleString() + ' pt';
     }
 
-    // イベント一覧表示処理（西暦・月・日・曜日表示）
-    function loadEvents() {
-      const defaultEvents = [
-        { id: 1, date: '2026-10-15', title: 'オープンキャンパス 秋の体験授業', isNew: true },
-        { id: 2, date: '2026-10-22', title: '特別講義：最新のリハビリ医療技術', isNew: false },
-        { id: 3, date: '2026-11-03', title: '学院祭（中央リハフェス 2026）', isNew: false }
-      ];
-
-      const saved = localStorage.getItem('admin_events');
-      const events = saved ? JSON.parse(saved) : defaultEvents;
+    // イベント一覧表示処理（Supabaseのeventsテーブルから取得）
+    async function loadEvents() {
       const listContainer = document.getElementById('display-event-list');
-      listContainer.innerHTML = '';
+      listContainer.innerHTML = '<li style="color:#94a3b8; justify-content:center;">イベント読み込み中...</li>';
 
-      if (events.length === 0) {
-        listContainer.innerHTML = '<li style="color:#94a3b8; justify-content:center;">現在予定されているイベントはありません</li>';
+      const { data: events, error } = await supabaseClient
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error('イベント取得エラー:', error);
+        listContainer.innerHTML = '<li style="color:#ef4444; justify-content:center;">イベントの取得に失敗しました</li>';
         return;
       }
 
-      // 開催日順に並び替え
-      events.sort((a, b) => new Date(a.date) - new Date(b.date));
+      listContainer.innerHTML = '';
+
+      if (!events || events.length === 0) {
+        listContainer.innerHTML = '<li style="color:#94a3b8; justify-content:center;">現在予定されているイベントはありません</li>';
+        return;
+      }
 
       const dayOfWeekStr = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -346,16 +348,26 @@
           dateBadgeText = `${year}/${month}/${date} (${day})`;
         }
 
+        const isNewFlag = ev.is_new ?? ev.isNew ?? false;
+
         li.innerHTML = `
           <span class="event-date">${dateBadgeText}</span>
           <div class="event-info">
             <p class="event-title">${ev.title}</p>
-            ${ev.isNew ? '<span class="event-tag event-tag-new">NEW</span>' : ''}
+            ${isNewFlag ? '<span class="event-tag event-tag-new">NEW</span>' : ''}
           </div>
         `;
         listContainer.appendChild(li);
       });
     }
+
+    // イベントのリアルタイム監視
+    supabaseClient
+      .channel('public:events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        loadEvents();
+      })
+      .subscribe();
 
     // ログアウト処理
     document.getElementById('logout-btn').addEventListener('click', function() {
