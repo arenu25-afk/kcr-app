@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ポイント履歴</title>
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#005bac">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="九リハアプリ">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -14,7 +22,8 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       width: 100%;
       max-width: 700px;
-      margin: 30px auto;
+      margin: 30px auto 96px auto;
+      box-sizing: border-box;
     }
 
     .history-card h2 {
@@ -72,13 +81,26 @@
       color: #94a3b8;
     }
 
+    /* 下部固定「ホームに戻る」バー */
     .btn-container {
-      margin-top: 24px;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(6px);
+      border-top: 1px solid #e2e8f0;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) 16px;
+      box-sizing: border-box;
+      z-index: 900;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
     }
 
     .btn-home {
       display: block;
       width: 100%;
+      max-width: 700px;
+      margin: 0 auto;
       padding: 12px;
       background-color: #f1f5f9;
       color: #475569;
@@ -176,6 +198,13 @@
     }
 
     loadHistory();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.error('SW登録失敗:', err));
+      });
+    }
   </script>
 </body>
 </html>
