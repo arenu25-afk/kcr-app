@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kcr-app-v6';
+const CACHE_NAME = 'kcr-app-v7';
 const ASSETS_TO_CACHE = [
   './',
   './login.html',

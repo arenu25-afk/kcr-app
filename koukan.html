@@ -221,7 +221,21 @@
     .qr-modal-desc {
       font-size: 14px;
       color: #475569;
-      margin: 0 0 16px 0;
+      margin: 0 0 12px 0;
+    }
+
+    /* エラーメッセージ表示エリア（アラート無限ループ防止） */
+    .scan-error-msg {
+      display: none;
+      background-color: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #b91c1c;
+      font-size: 13px;
+      font-weight: bold;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      line-height: 1.4;
     }
 
     .video-container {
@@ -301,6 +315,7 @@
       <h3>📷 ポイント交換QR読み取り</h3>
       <div class="qr-modal-target" id="modal-target-info">-</div>
       <p class="qr-modal-desc">景品交換カウンターの「ポイント交換用」QRコードにかざしてください</p>
+      <div class="scan-error-msg" id="scan-error-msg"></div>
 
       <div class="video-container">
         <video id="exchange-video" playsinline></video>
@@ -323,7 +338,7 @@
     let isScanning = false;
     let videoStream = null;
     let pendingExchangeItem = null;
-    let isAlertShowing = false;
+    let errorTimer = null;
 
     async function init() {
       if (!currentUser || !currentUser.email) {
@@ -415,9 +430,10 @@
     function openExchangeScanner() {
       const modal = document.getElementById('qr-modal');
       const video = document.getElementById('exchange-video');
+      const errBox = document.getElementById('scan-error-msg');
+      errBox.style.display = 'none';
       modal.style.display = 'flex';
       isScanning = true;
-      isAlertShowing = false;
 
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
         .then(stream => {
@@ -436,11 +452,26 @@
     // カメラ停止・モーダル閉じる
     function closeExchangeScanner() {
       isScanning = false;
+      if (errorTimer) {
+        clearTimeout(errorTimer);
+        errorTimer = null;
+      }
       document.getElementById('qr-modal').style.display = 'none';
       if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
       }
+    }
+
+    // 画面内エラー表示（alertを使わないためキャンセルボタンが常に押せる）
+    function showScanError(msg) {
+      const errBox = document.getElementById('scan-error-msg');
+      errBox.textContent = msg;
+      errBox.style.display = 'block';
+      if (errorTimer) clearTimeout(errorTimer);
+      errorTimer = setTimeout(() => {
+        errBox.style.display = 'none';
+      }, 2500);
     }
 
     // QRコードフレーム解析
@@ -451,7 +482,7 @@
       const canvas = document.getElementById('exchange-canvas');
       const ctx = canvas.getContext('2d');
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA && !isAlertShowing) {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
         canvas.height = video.videoHeight;
         canvas.width = video.videoWidth;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -469,9 +500,7 @@
             completeExchange();
             return;
           } else {
-            isAlertShowing = true;
-            alert(`このQRコード（${scannedText}）はポイント交換用ではありません。\n「ポイント交換用」のQRコードを読み取ってください。`);
-            isAlertShowing = false;
+            showScanError(`「${scannedText}」は交換用ではありません。「ポイント交換用」QRをかざしてください。`);
           }
         }
       }
