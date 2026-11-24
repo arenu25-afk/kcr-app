@@ -1,6 +1,6 @@
 {
   "name": "九州中央リハビリテーション学院アプリ",
-  "short_name": "中央リハアプリ",
+  "short_name": "九リハアプリ",
   "description": "九州中央リハビリテーション学院 オープンキャンパス・ポイントアプリ",
   "start_url": "./login.html",
   "scope": "./",
