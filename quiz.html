@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>学科クイズ</title>
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#005bac">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="中央リハアプリ">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -144,7 +152,7 @@
           <option value="情報システム学科">情報システム学科</option>
         </select>
       </div>
-      <button class="btn-action" onclick="startQuiz()">クイズを開始する</button>
+      <button class="btn-action" id="start-quiz-btn" onclick="startQuiz()">クイズを開始する</button>
     </div>
 
     <!-- 2. クイズ解答エリア（初期状態は非表示） -->
@@ -171,17 +179,38 @@
     let filteredQuizzes = [];
     let currentIndex = 0;
 
-    function loadQuizzes() {
-      const saved = localStorage.getItem('admin_quizzes');
-      allQuizzes = saved ? JSON.parse(saved) : [];
+    // Supabaseからクイズ一覧を取得
+    async function loadQuizzes() {
+      const startBtn = document.getElementById('start-quiz-btn');
+      startBtn.disabled = true;
+      startBtn.textContent = 'クイズ読み込み中...';
+
+      const { data, error } = await supabaseClient
+        .from('quizzes')
+        .select('*')
+        .order('id', { ascending: true });
+
+      startBtn.disabled = false;
+      startBtn.textContent = 'クイズを開始する';
+
+      if (error) {
+        console.error('クイズ取得エラー:', error);
+        alert('クイズデータの取得に失敗しました: ' + error.message);
+        return;
+      }
+
+      allQuizzes = data || [];
     }
 
-    function startQuiz() {
+    async function startQuiz() {
       const selectedDept = document.getElementById('user-dept-select').value;
       if (!selectedDept) {
         alert('学科を選択してください。');
         return;
       }
+
+      // 開始時にも最新データを再取得
+      await loadQuizzes();
 
       filteredQuizzes = allQuizzes.filter(q => q.dept === selectedDept);
 
@@ -249,7 +278,8 @@
           const earnedPoints = 10;
           const newPoints = (currentUser.points || 0) + earnedPoints;
 
-          let history = currentUser.pointHistory || currentUser.point_history || [];
+          const historyKey = Array.isArray(currentUser.point_history) ? 'point_history' : 'pointHistory';
+          let history = currentUser[historyKey] || [];
           if (!Array.isArray(history)) history = [];
 
           const now = new Date();
@@ -272,7 +302,7 @@
             .from('users')
             .update({ 
               points: newPoints,
-              pointHistory: history
+              [historyKey]: history
             })
             .eq('email', currentUser.email);
 
@@ -284,7 +314,7 @@
 
           // 3. ローカル側も更新データに置き換え
           currentUser.points = newPoints;
-          currentUser.pointHistory = history;
+          currentUser[historyKey] = history;
           localStorage.setItem('currentUser', JSON.stringify(currentUser));
         }
 
@@ -313,6 +343,13 @@
     }
 
     loadQuizzes();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.error('SW登録失敗:', err));
+      });
+    }
   </script>
 </body>
 </html>
